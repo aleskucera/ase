@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
+from scipy.optimize import least_squares
 
 
 def exp_func(t, a, b):
@@ -10,6 +11,46 @@ def exp_func(t, a, b):
 def linear_func(t, a, b):
     return a * t + b
 
+
+def ideal_characteristic(t):
+    """ Linear function that intersects two points
+    p1: (-40, 4.5)
+    p2: (125, 0.5)
+
+    y = a * x + b
+
+    a = (y2 - y1) / (x2 - x1)
+    b = y1 - a * x1
+    """
+
+    a = (0.5 - 4.5) / (125 + 40)
+    b = 4.5 + a * 40
+    return a * t + b
+
+def voltage_divider(t, r1, r2):
+    """ Linearization circuit for NTC.
+
+    Vout = Vin * (R2 + R_ntc(t)) / (R1 + R2 + R_ntc(t))
+
+    Args:
+        t: temperature in °C
+        r1: resistance of R1 in Ohm
+        r2: resistance of R2 in Ohm
+
+    Returns:
+        Vout: output voltage of the voltage divider in V for the Vin = 1 V
+    """
+
+    r_ntc = exp_func(t, 0.02, 3512.81)
+    r2_ntc = (r2 * r_ntc) / (r2 + r_ntc)
+    return 5 * r2_ntc / (r1 + r2_ntc)
+
+# def residuals(params):
+#     r1, r2 = params
+#     t = np.linspace(-40, 125, 100)
+#     ntc_lin = voltage_divider(t, r1, r2, 0.02, 3512.81)
+#     ideal_lin = ideal_characteristic(t)
+#     return ntc_lin - ideal_lin
 
 def main():
     temp = np.array([-20, 0, 20, 40, 60, 80, 100])
@@ -24,8 +65,8 @@ def main():
     pt100 = data['pt100']
 
     # Sort by temperature
-    # order = np.argsort(pt100)
-    order = np.arange(len(pt100))
+    order = np.argsort(pt100)
+    # order = np.arange(len(pt100))
     pt100 = pt100[order]
     ntc1 = ntc1[order]
     ntc2 = ntc2[order]
@@ -33,9 +74,11 @@ def main():
 
     # Curve fitting for NTC1
     popt_ntc1, pcov_ntc1 = curve_fit(exp_func, pt100, ntc1, bounds=(0, np.inf))
+    print(f"NTC1 curve fitting parameters: a = {popt_ntc1[0]:.2f}, b = {popt_ntc1[1]:.2f}")
 
     # Curve fitting for NTC2
     popt_ntc2, pcov_ntc2 = curve_fit(exp_func, pt100, ntc2, bounds=(0, np.inf))
+    print(f"NTC2 curve fitting parameters: a = {popt_ntc2[0]:.2f}, b = {popt_ntc2[1]:.2f}")
 
     # Plotting NTC1 vs Temperature with Low and High Limits
     plt.figure(figsize=(6, 4))
@@ -110,6 +153,27 @@ def main():
 
     # Print the linear function parameters
     print('EGR Sensor Linear Function Parameters: a =', popt_egr[0], 'b =', popt_egr[1])
+
+    # Plot the NTC1 and NTC2 curves with the ideal characteristic
+    t = np.linspace(-40, 125, 100)
+    ideal_lin = ideal_characteristic(t)
+
+    # Apply curve fitting for NTC
+    popt_r, pcov_r = curve_fit(voltage_divider, t, ideal_lin, bounds=(0, np.inf))
+    print(f"NTC curve fitting parameters: R1 = {popt_r[0]:.2f}, R2 = {popt_r[1]:.2f}")
+
+    plt.figure(figsize=(6, 4))
+    plt.plot(t, voltage_divider(t, *popt_r), color='blue', linewidth=2)
+    plt.plot(t, ideal_lin, color='green', linewidth=2)
+    plt.xlabel('Temperature [°C]', fontsize=11)
+    plt.ylabel('Voltage [V]', fontsize=11)
+    # plt.title('NTC1, NTC2 and Ideal Characteristic', fontsize=16)
+    plt.legend(['Linearized NTC1', 'Ideal Characteristics'])
+    plt.grid(True)
+
+    plt.show()
+
+
 
 
 if __name__ == '__main__':

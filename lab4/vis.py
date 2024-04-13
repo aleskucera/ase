@@ -318,7 +318,7 @@ def plot_linerity():
 
     # Plotting NTC1 vs Temperature with Low and High Limits
     fig, ax = plt.subplots(figsize=(6, 4))
-    line = ax.plot(time, ultra, marker='o', color='blue', linewidth=1, markeredgewidth=1, markersize=2)
+    line = ax.plot(time, lidar, marker='o', color='blue', linewidth=1, markeredgewidth=1, markersize=2)
     # ax.plot(time, lidar, marker='o', color='green', linewidth=1, markeredgewidth=1, markersize=2)
     ax.set_xlabel('Time [s]', fontsize=11)
     ax.set_ylabel('Distance [cm]', fontsize=11)
@@ -344,9 +344,11 @@ def plot_linerity():
 
 def compute_FOV(t1: float, t2: float, d: float):
     import math
-    t = (t2 + t1) / 2
+    t = (t2 + t1) * 1 / 2
 
     # Atan2
+    s = 3 * t + 8
+    print(f"s: {s}")
     x = 2 * math.atan2((3 * t + 8) / 2, d)
     x = math.degrees(x)
     return x
@@ -370,7 +372,7 @@ if __name__ == '__main__':
         print(compute_FOV(t1, t2, int(d)))
 
     # plot_FOV()
-    # plot_linerity()
+    plot_linerity()
 
 # ULTRASONIC SENSOR
 # 20 cm:
